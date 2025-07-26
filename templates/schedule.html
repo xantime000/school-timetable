@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <title>Расписание {{ class_name }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            text-align: center;
+        }
+        table {
+            border-collapse: collapse;
+            margin: auto;
+            width: 90%;
+        }
+        th, td {
+            border: 1px solid #999;
+            padding: 8px;
+            vertical-align: top;
+            min-width: 120px;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        td.lesson {
+            height: 60px;
+            white-space: normal;
+        }
+        td.empty {
+            background-color: #eee;
+        }
+        /* Нумерация уроков слева */
+        .lesson-number {
+            width: 40px;
+            background-color: #ddd;
+            font-weight: bold;
+        }
+        /* Кнопки листания */
+        .nav-buttons {
+            margin-bottom: 15px;
+        }
+        .nav-buttons a {
+            text-decoration: none;
+            padding: 10px 15px;
+            border: 1px solid #666;
+            border-radius: 5px;
+            margin: 0 10px;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+        .nav-buttons a:hover {
+            background-color: #ddd;
+        }
+        /* Выходные дни — серый фон */
+        th.weekend, td.weekend {
+            background-color: #fafafa;
+            color: #bbb;
+        }
+    </style>
+</head>
+<body>
+    <h1>Расписание {{ class_name }}</h1>
+
+    <div class="nav-buttons">
+        <a href="/schedule?class_id={{ class_id }}&week_offset={{ week_offset - 1 }}">← Предыдущая неделя</a>
+        <a href="/schedule?class_id={{ class_id }}&week_offset={{ week_offset + 1 }}">Следующая неделя →</a>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th></th>
+                {% for day in days %}
+                    {% set weekday = day.weekday() %}
+                    <th class="{{ 'weekend' if weekday >= 5 else '' }}">
+                        {{ day.strftime("%a %d.%m.%Y") }}
+                    </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for lesson_number in range(1, 9) %}
+                <tr>
+                    <td class="lesson-number">{{ lesson_number }}</td>
+                    {% for day_index in range(7) %}
+                        {% set lesson = lessons_week[day_index][lesson_number - 1] %}
+                        <td class="lesson {{ 'weekend' if day_index >= 5 else '' }}">
+                            {{ lesson | safe }}
+                        </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <p><a href="/">← Вернуться к выбору класса</a></p>
+</body>
+</html>

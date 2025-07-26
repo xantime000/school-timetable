@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Добавить урок</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 30px;
+            max-width: 600px;
+            margin: auto;
+        }
+        h1 {
+            text-align: center;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin-top: 10px;
+        }
+        select, input {
+            padding: 8px;
+            font-size: 16px;
+            margin-top: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        a {
+            display: block;
+            margin-top: 20px;
+            text-align: center;
+            text-decoration: none;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Добавить урок</h1>
+    <form method="post" action="/add_lesson">
+        <label for="class_id">Класс:</label>
+        <select name="class_id" id="class_id" required>
+            {% for c in classes %}
+                <option value="{{ c.id }}">{{ c.number }}{{ c.letter }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="subject_id">Предмет:</label>
+        <select name="subject_id" id="subject_id" required>
+            {% for s in subjects %}
+                <option value="{{ s.id }}">{{ s.name }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="teacher_id">Преподаватель:</label>
+        <select name="teacher_id" id="teacher_id" required>
+            {% for t in teachers %}
+                <option value="{{ t.id }}">{{ t.name }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="room_id">Кабинет:</label>
+        <select name="room_id" id="room_id" required>
+            {% for r in rooms %}
+                <option value="{{ r.id }}">{{ r.name }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="day">День недели (0=Пн, 4=Пт):</label>
+        <input type="number" name="day" id="day" min="0" max="4" required>
+
+        <label for="lesson_number">Номер урока (1-8):</label>
+        <input type="number" name="lesson_number" id="lesson_number" min="1" max="8" required>
+
+        <button type="submit">Сохранить</button>
+    </form>
+    <a href="/">← Назад на главную</a>
+</body>
+</html>

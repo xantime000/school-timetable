@@ -1,0 +1,52 @@
+<!-- templates/choose_number.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <title>Выбор класса</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            padding: 40px;
+        }
+        h1 {
+            color: #333;
+        }
+        .btn {
+            display: inline-block;
+            margin: 10px;
+            padding: 15px 30px;
+            font-size: 18px;
+            text-decoration: none;
+            background-color: #2196F3;
+            color: white;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background-color: #1976D2;
+        }
+        .btn-gen {
+            background-color: #4CAF50;
+        }
+        .btn-gen:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Выберите номер класса</h1>
+
+    <div style="display: flex; justify-content: center;">
+        {% for number in numbers %}
+            <a href="/classes/{{ number }}" class="btn">{{ number }}</a>
+        {% endfor %}
+    </div>
+
+    <p style="margin-top: 30px;">
+        <a href="/generate_schedule" class="btn btn-gen">🔄 Сгенерировать расписание</a>
+    </p>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <title>Выбор буквы класса {{ number }}</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }
+        a.btn {
+            display: inline-block;
+            margin: 10px;
+            padding: 12px 20px;
+            background-color: #2196F3;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 18px;
+        }
+        a.btn:hover {
+            background-color: #1976D2;
+        }
+        p.back-link {
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Класс {{ number }}</h1>
+    <h2>Выберите букву:</h2>
+    <div>
+        {% for letter in letters %}
+            <a class="btn" href="/schedule?class_id={{ classes_dict[letter] }}">{{ letter }}</a>
+        {% endfor %}
+    </div>
+    <p class="back-link"><a href="/" style="text-decoration:none;">← Назад</a></p>
+</body>
+</html>

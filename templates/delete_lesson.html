@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Удалить урок</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 30px;
+            max-width: 600px;
+            margin: auto;
+        }
+        h1 {
+            text-align: center;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        input[type="radio"] {
+            margin-right: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #d32f2f;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #b71c1c;
+        }
+        a {
+            display: block;
+            margin-top: 20px;
+            text-align: center;
+            text-decoration: none;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Выберите урок для удаления</h1>
+    <form method="post" action="/delete_lesson">
+        <ul>
+            {% for lesson in lessons %}
+            <li>
+                <label>
+                    <input type="radio" name="lesson_id" value="{{ lesson.id }}" required>
+                    <strong>{{ lesson.school_class.number }}{{ lesson.school_class.letter }}</strong>:
+                    {{ lesson.subject.name }} —
+                    {{ ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'][lesson.day] }},
+                    {{ lesson.lesson_number }}-й урок
+                    ({{ lesson.room.name }}, {{ lesson.teacher.name if lesson.teacher else '?' }})
+                </label>
+            </li>
+            {% endfor %}
+        </ul>
+        <button type="submit">Удалить выбранный урок</button>
+    </form>
+    <a href="/">← Назад на главную</a>
+</body>
+</html>
