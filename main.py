@@ -8,7 +8,7 @@ from .models import Base, SchoolClass, Subject, Room, Lesson, Teacher
 from .genetic import generate_random_schedule
 from datetime import date, timedelta
 
-DATABASE_URL = "postgresql://postgres:######@localhost:5432/postgres"
+DATABASE_URL = "postgresql://postgres:ADx809Klm0p@localhost:5432/postgres"
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 
@@ -123,24 +123,24 @@ def create_initial_data(db: Session):
     print("✅ Расширенные начальные данные добавлены в БД.")
 
 
-@app.on_event("startup")
-def on_startup():
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    try:
-        create_initial_data(db)
-    finally:
-        db.close()
 # @app.on_event("startup")
 # def on_startup():
-#     Base.metadata.drop_all(bind=engine)
 #     Base.metadata.create_all(bind=engine)
 #     db = SessionLocal()
 #     try:
 #         create_initial_data(db)
 #     finally:
 #         db.close()
-#
+@app.on_event("startup")
+def on_startup():
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        create_initial_data(db)
+    finally:
+        db.close()
+
 def get_db():
     db = SessionLocal()
     try:

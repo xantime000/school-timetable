@@ -2,7 +2,7 @@ import random
 from sqlalchemy.orm import Session
 from .models import SchoolClass, Subject, Room, Lesson, Teacher
 
-# Правила: сколько уроков в неделю для каждого класса
+
 SUBJECTS_BY_CLASS = {
     "10А": {
         "Алгебра": 4,
@@ -14,9 +14,12 @@ SUBJECTS_BY_CLASS = {
         "Физкультура": 2,
         "Химия": 1
     },
+    "11А":{
+        "Алгебра": 4,
+        "Геометрия": 4
+    }
 }
 
-# Сопоставление предмета и учителя
 TEACHERS = {
     "Алгебра": "Иванов И.И. (алгебра)",
     "Геометрия": "Петрова А.В. (геометрия)",
@@ -28,7 +31,6 @@ TEACHERS = {
     "Химия": "Николаева Т.С. (химия)"
 }
 
-# Привязка предметов к кабинетам
 SUBJECT_ROOMS = {
     "Алгебра": ["Кабинет 102 (алгебра)"],
     "Геометрия": ["Кабинет 103 (геометрия)"],
@@ -40,112 +42,137 @@ SUBJECT_ROOMS = {
     "Химия": ["Кабинет 202 (химия)"]
 }
 
-DAYS = list(range(5))  # Пн–Пт
-SLOTS = list(range(1, 9))  # Уроки 1–8
+DAYS = list(range(5))       # Пн–Пт
+SLOTS = list(range(1, 9))   # Уроки 1–8
+
 
 def generate_random_schedule(db: Session):
-    # Очистка старого расписания
     db.query(Lesson).delete()
     db.commit()
 
-    # Загружаем данные из БД
     classes = db.query(SchoolClass).all()
     subjects = db.query(Subject).all()
     rooms = db.query(Room).all()
     teachers = db.query(Teacher).all()
 
-    # Создаём словари: имя -> объект
     class_map = {f"{cls.number}{cls.letter}": cls for cls in classes}
-    subject_map = {subj.name: subj for subj in subjects}
-    room_map = {room.name: room for room in rooms}
+    subject_map = {s.name: s for s in subjects}
     teacher_map = {t.name: t for t in teachers}
+    room_map = {r.name: r for r in rooms}
 
-    # Структура для отслеживания занятых слотов
-    schedule_grid = {}
-    for day in DAYS:
-        for slot in SLOTS:
-            schedule_grid[(day, slot)] = {
-                "classes": set(),
-                "teachers": set(),
-                "rooms": set()
-            }
+    # Сетка занятости: (day, slot) -> списки занятых id
+    busy_slots = {(day, slot): {"classes": set(), "teachers": set(), "rooms": set()}
+                  for day in DAYS for slot in SLOTS}
 
-    # Для каждого класса генерируем расписание
-    for class_name, subjects_config in SUBJECTS_BY_CLASS.items():
+    # Оптимизация: создаем список классов и перемешиваем его
+    class_names = list(SUBJECTS_BY_CLASS.keys())
+    random.shuffle(class_names)
+
+    for class_name in class_names:
         if class_name not in class_map:
-            print(f"⚠️ Класс {class_name} не найден в БД")
+            print(f"⚠️ Класс {class_name} не найден")
             continue
+        school_class = class_map[class_name]
+        subj_dict = SUBJECTS_BY_CLASS[class_name]
 
-        cls = class_map[class_name]
-        print(f"Генерация расписания для {class_name}...")
+        # Равномерное распределение уроков по дням недели
+        lessons_by_day = {day: [] for day in DAYS}
+        total_lessons = sum(subj_dict.values())
+        lessons_per_day = total_lessons // len(DAYS)
+        extra_lessons = total_lessons % len(DAYS)
 
-        # Собираем все уроки для расписания
-        lessons_to_schedule = []
-        for subject_name, hours in subjects_config.items():
-            if subject_name not in subject_map:
-                print(f"⚠️ Предмет {subject_name} не найден в БД")
+        # Распределяем уроки по дням
+        day_index = 0
+        for subj_name, count in subj_dict.items():
+            subj = subject_map.get(subj_name)
+            teacher = teacher_map.get(TEACHERS.get(subj_name))
+            rooms_list = [room_map[r] for r in SUBJECT_ROOMS.get(subj_name, []) if r in room_map]
+
+            if not subj or not teacher or not rooms_list:
+                print(f"⚠️ Пропущен {subj_name}: нет предмета/учителя/кабинета")
                 continue
-            subject = subject_map[subject_name]
-            teacher_name = TEACHERS.get(subject_name)
-            if not teacher_name or teacher_name not in teacher_map:
-                print(f"⚠️ Учитель для {subject_name} не найден: {teacher_name}")
-                continue
-            for _ in range(hours):
-                lessons_to_schedule.append((subject, teacher_name))
 
-        # Перемешиваем уроки
-        random.shuffle(lessons_to_schedule)
+            # Распределяем уроки предмета по дням
+            for _ in range(count):
+                target_day = DAYS[day_index]
+                lessons_by_day[target_day].append((subj, teacher, random.choice(rooms_list)))
+                day_index = (day_index + 1) % len(DAYS)
 
-        # Распределяем уроки по дням равномерно
-        total_hours = sum(subjects_config.values())
-        lessons_per_day = [total_hours // len(DAYS)] * len(DAYS)
-        for i in range(total_hours % len(DAYS)):
-            lessons_per_day[i] += 1
-
-        # Размещаем уроки по порядку с начала слотов
-        current_lesson = 0
+        # Оптимизация: группируем уроки в непрерывные блоки
         for day in DAYS:
-            if current_lesson >= len(lessons_to_schedule):
-                break
-            lessons_for_day = lessons_to_schedule[current_lesson:current_lesson + lessons_per_day[day]]
-            current_lesson += lessons_per_day[day]
+            daily_lessons = lessons_by_day[day]
+            if not daily_lessons:
+                continue
 
-            # Начинаем с 1-го слота
-            slot = 1
-            for subject, teacher_name in lessons_for_day:
-                teacher = teacher_map[teacher_name]
-                subject_obj = subject_map[subject.name]
-                possible_rooms = [room_map[rn] for rn in SUBJECT_ROOMS.get(subject.name, []) if rn in room_map]
+            # Сортируем уроки по сложности размещения
+            daily_lessons.sort(key=lambda x: len(SUBJECT_ROOMS.get(x[0].name, [])))
 
-                if not possible_rooms:
-                    print(f"❌ Нет подходящего кабинета для {subject.name}")
+            # Пытаемся разместить уроки непрерывным блоком
+            target_slots = list(range(1, len(daily_lessons) + 1))
+            random.shuffle(target_slots)  # Начинаем со случайной позиции
+
+            for lesson_data in daily_lessons:
+                subj, teacher, room = lesson_data
+                placed = False
+
+                # Пробуем слоты в порядке близости к началу блока
+                for slot in sorted(target_slots, key=lambda s: abs(s - target_slots[0])):
+                    slot_key = (day, slot)
+
+                    # Проверяем доступность
+                    if (school_class.id in busy_slots[slot_key]["classes"] or
+                            teacher.id in busy_slots[slot_key]["teachers"] or
+                            room.id in busy_slots[slot_key]["rooms"]):
+                        continue
+
+                    # Нашли свободный слот - размещаем урок
+                    db.add(Lesson(
+                        class_id=school_class.id,
+                        subject_id=subj.id,
+                        teacher_id=teacher.id,
+                        room_id=room.id,
+                        day=day,
+                        lesson_number=slot
+                    ))
+
+                    # Обновляем информацию о занятости
+                    busy_slots[slot_key]["classes"].add(school_class.id)
+                    busy_slots[slot_key]["teachers"].add(teacher.id)
+                    busy_slots[slot_key]["rooms"].add(room.id)
+
+                    # Убираем использованный слот из целевых
+                    if slot in target_slots:
+                        target_slots.remove(slot)
+
+                    placed = True
                     break
 
-                room = random.choice(possible_rooms)
-                while slot in SLOTS and (
-                    cls.id in schedule_grid[(day, slot)]["classes"] or
-                    teacher.id in schedule_grid[(day, slot)]["teachers"] or
-                    room.id in schedule_grid[(day, slot)]["rooms"]
-                ):
-                    slot += 1
-                if slot > SLOTS[-1]:
-                    print(f"❌ Нет места для {subject.name} на день {day + 1}")
-                    break
+                if not placed:
+                    # Если не удалось разместить в целевом блоке, ищем любой свободный слот
+                    for slot in SLOTS:
+                        slot_key = (day, slot)
+                        if (school_class.id in busy_slots[slot_key]["classes"] or
+                                teacher.id in busy_slots[slot_key]["teachers"] or
+                                room.id in busy_slots[slot_key]["rooms"]):
+                            continue
 
-                lesson = Lesson(
-                    class_id=cls.id,
-                    subject_id=subject_obj.id,
-                    teacher_id=teacher.id,
-                    room_id=room.id,
-                    day=day,
-                    lesson_number=slot
-                )
-                db.add(lesson)
-                schedule_grid[(day, slot)]["classes"].add(cls.id)
-                schedule_grid[(day, slot)]["teachers"].add(teacher.id)
-                schedule_grid[(day, slot)]["rooms"].add(room.id)
-                print(f"✅ {subject.name} поставлен на {day + 1} день, {slot} урок в {room.name}")
-                slot += 1
+                        db.add(Lesson(
+                            class_id=school_class.id,
+                            subject_id=subj.id,
+                            teacher_id=teacher.id,
+                            room_id=room.id,
+                            day=day,
+                            lesson_number=slot
+                        ))
+
+                        busy_slots[slot_key]["classes"].add(school_class.id)
+                        busy_slots[slot_key]["teachers"].add(teacher.id)
+                        busy_slots[slot_key]["rooms"].add(room.id)
+                        placed = True
+                        break
+
+                    if not placed:
+                        print(f"❌ Не удалось поставить {subj.name} для {class_name} в день {day}")
 
     db.commit()
-    print("✅ Расписание сгенерировано!")
+    print("✅ Генерация завершена. Минимизированы окна в расписании.")
